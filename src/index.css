@@ -1,0 +1,669 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Heartbeat shimmer for typing indicator (visible icon, no box) */
+@keyframes heartbeat {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(59,130,246,0.0)); color: #2563eb; }
+  25% { transform: scale(1.1); filter: drop-shadow(0 0 8px rgba(59,130,246,0.6)); color: #2dd4bf; }
+  40% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(6,182,212,0.0)); color: #2563eb; }
+  60% { transform: scale(1.12); filter: drop-shadow(0 0 10px rgba(6,182,212,0.7)); color: #0ea5e9; }
+  100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(59,130,246,0.0)); color: #2563eb; }
+}
+
+.heartbeat-shimmer {
+  animation: heartbeat 1.2s ease-in-out infinite;
+}
+
+@keyframes pop-in {
+  0% { transform: scale(0.9); opacity: 0; }
+  60% { transform: scale(1.04); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes fade-up {
+  0% { transform: translateY(8px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.animate-pop-in { animation: pop-in 600ms cubic-bezier(.2,.8,.2,1) both; }
+.animate-fade-up { animation: fade-up 500ms ease-out both; }
+
+/* Dual gradient for progress and shimmering overlay only on filled area */
+.progress-gradient {
+  background-image: linear-gradient(90deg, #3b82f6, #14b8a6);
+}
+
+.with-shimmer {
+  position: relative;
+}
+
+.with-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -40%;
+  width: 40%;
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0) 100%);
+  animation: shimmer-move 1.2s infinite;
+}
+
+@keyframes shimmer-move {
+  0% { transform: translateX(-60%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Shimmering gradient text */
+.shimmer-text {
+  background: linear-gradient(90deg, #3b82f6, #14b8a6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  position: relative;
+}
+
+.shimmer-text::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.45) 50%, rgba(255,255,255,0) 100%);
+  transform: translateX(-100%);
+  animation: shimmer-text-move 1.2s infinite;
+}
+
+@keyframes shimmer-text-move {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Performance optimizations */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Optimized logo shimmer effect */
+@keyframes logo-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.logo-shimmer {
+  background: linear-gradient(
+    90deg,
+    #374151 0%,
+    #2563eb 25%,
+    #06b6d4 50%,
+    #2563eb 75%,
+    #374151 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: logo-shimmer 3s ease-in-out infinite;
+  will-change: background-position;
+}
+
+/* Improved animated underline with smooth transitions */
+@keyframes slide-in {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.animated-underline {
+  animation: slide-in 0.3s ease-out;
+  transform-origin: left;
+  will-change: transform;
+  transition: all 0.3s ease-out;
+}
+
+/* Optimized sophisticated border shimmer */
+@keyframes sophisticated-border-shimmer {
+  0% {
+    background-position: 0% 0%;
+    box-shadow: 
+      0 0 15px rgba(59, 130, 246, 0.4),
+      0 0 30px rgba(6, 182, 212, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+  50% {
+    background-position: 100% 100%;
+    box-shadow: 
+      0 8px 25px rgba(6, 182, 212, 0.7),
+      -4px 4px 30px rgba(59, 130, 246, 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+  100% {
+    background-position: 0% 0%;
+    box-shadow: 
+      0 0 15px rgba(59, 130, 246, 0.4),
+      0 0 30px rgba(6, 182, 212, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+}
+
+.sophisticated-shimmer-box {
+  position: relative;
+  background: linear-gradient(white, white) padding-box,
+              linear-gradient(45deg, 
+                transparent 30%,
+                rgba(59, 130, 246, 0.8) 50%,
+                rgba(6, 182, 212, 0.9) 60%,
+                rgba(59, 130, 246, 0.8) 70%,
+                transparent 80%
+              ) border-box;
+  background-size: 300% 300%;
+  border: 2px solid transparent;
+  animation: sophisticated-border-shimmer 4s ease-in-out infinite;
+  will-change: background-position, box-shadow;
+}
+
+.sophisticated-shimmer-box:hover {
+  animation-duration: 2s;
+}
+
+/* Simple card styles - replacing glass effects */
+.simple-card {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.96) 0%,
+    rgba(248, 250, 252, 0.96) 100%
+  );
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  /* Subtle, short drop shadow to avoid glow beyond card */
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
+  transition: all 0.2s ease-out;
+}
+
+.simple-card:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(248, 250, 252, 0.98) 100%
+  );
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  /* Tighter, modern hover elevation */
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+  transform: translateY(-2px);
+}
+
+/* Selected card state - simple highlight */
+.simple-card-selected {
+  background: linear-gradient(
+    135deg,
+    rgba(239, 246, 255, 1) 0%,
+    rgba(240, 253, 250, 0.95) 100%
+  );
+  border: 2px solid rgba(59, 130, 246, 0.3);
+  /* Keep selection crisp without excessive glow */
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.09);
+  transform: translateY(-2px);
+}
+
+/* Ensure metrics row has no background fill while clipping children */
+.metrics-row {
+  background: transparent !important;
+}
+
+/* Admin Dashboard Animations */
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-slide-in {
+  animation: slideInFromTop 0.3s ease-out;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out;
+}
+
+/* Toast animations */
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutToRight {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+.toast-enter {
+  animation: slideInFromRight 0.3s ease-out;
+}
+
+.toast-exit {
+  animation: slideOutToRight 0.3s ease-out;
+}
+
+/* Table row hover effects */
+.table-row-hover {
+  transition: all 0.2s ease-out;
+}
+
+.table-row-hover:hover {
+  background-color: rgba(59, 130, 246, 0.05);
+  transform: translateX(2px);
+}
+
+/* Status badge animations */
+.status-badge {
+  transition: all 0.2s ease-out;
+}
+
+.status-badge:hover {
+  transform: scale(1.05);
+}
+
+/* Loading spinner */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Optimized sophisticated button styles */
+.sophisticated-button {
+  --black-700: hsla(220, 30%, 15%, 1);
+  --border_radius: 0.75rem;
+  --transition: 0.2s ease-in-out;
+  --offset: 2px;
+
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transform-origin: center;
+  padding: 1rem 2rem;
+  background-color: transparent;
+  border: none;
+  border-radius: var(--border_radius);
+  transform: scale(calc(1 + (var(--active, 0) * 0.05)));
+  transition: transform var(--transition);
+  font-size: 1.125rem;
+  font-weight: 600;
+  will-change: transform;
+}
+
+.sophisticated-button::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+  border-radius: var(--border_radius);
+  box-shadow: 
+    inset 0 0.5px hsl(0, 0%, 100%), 
+    inset 0 -1px 2px 0 hsl(0, 0%, 0%),
+    0px 4px 15px -4px hsla(0 0% 0% / calc(0.3 + var(--active, 0) * 0.2)),
+    0 0 0 calc(var(--active, 0) * 0.375rem) hsl(210 100% 60% / 0.4);
+  transition: all var(--transition);
+  z-index: 0;
+  will-change: box-shadow;
+}
+
+.sophisticated-button::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, 
+    hsla(210, 100%, 70%, 0.8) 0%,
+    hsla(190, 100%, 60%, 0.9) 50%,
+    hsla(210, 100%, 70%, 0.8) 100%
+  );
+  background-image: 
+    radial-gradient(at 51% 89%, hsla(210, 45%, 74%, 1) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, hsla(190, 36%, 60%, 1) 0px, transparent 50%),
+    radial-gradient(at 22% 91%, hsla(210, 36%, 60%, 1) 0px, transparent 50%);
+  background-position: top;
+  opacity: var(--active, 0);
+  border-radius: var(--border_radius);
+  transition: opacity var(--transition);
+  z-index: 2;
+  will-change: opacity;
+}
+
+.sophisticated-button:is(:hover, :focus-visible) {
+  --active: 1;
+}
+
+.sophisticated-button:active {
+  transform: scale(0.98);
+}
+
+.sophisticated-button .dots_border {
+  --size_border: calc(100% + 4px);
+  overflow: hidden;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: var(--size_border);
+  height: var(--size_border);
+  background-color: transparent;
+  border-radius: var(--border_radius);
+  z-index: -1;
+}
+
+.sophisticated-button .dots_border::before {
+  content: "";
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+  width: 100%;
+  height: 2rem;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255, 255, 255, 0.8) 50%, 
+    transparent 100%
+  );
+  mask: linear-gradient(transparent 0%, white 50%, transparent 100%);
+  animation: rotate 3s linear infinite;
+  will-change: transform;
+}
+
+@keyframes rotate {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.sophisticated-button .text_button {
+  position: relative;
+  z-index: 10;
+  background-image: linear-gradient(
+    90deg,
+    hsla(0 0% 100% / 1) 0%,
+    hsla(0 0% 100% / calc(1 - var(--active, 0) * 0.3)) 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: white;
+  transition: all var(--transition);
+}
+
+.sophisticated-button:hover .text_button {
+  -webkit-text-fill-color: transparent;
+}
+
+/* Optimized shimmer effect for text */
+@keyframes shimmer-text {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer-text {
+  background: linear-gradient(
+    90deg,
+    #2563eb 0%,
+    #06b6d4 25%,
+    #3b82f6 50%,
+    #06b6d4 75%,
+    #2563eb 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer-text 4s ease-in-out infinite;
+  will-change: background-position;
+}
+
+/* Slow variant for shimmer text */
+.shimmer-slow {
+  animation-duration: 6s !important;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+  /* Ensure consistent scroll behavior across browsers */
+  scroll-padding-top: 0;
+}
+
+/* Prevent scroll restoration issues */
+body {
+  /* Ensure body doesn't interfere with scroll positioning */
+  overflow-x: hidden;
+}
+
+/* Optimized body styling with reduced padding for fixed navbar */
+body {
+  background: linear-gradient(
+    135deg,
+    #e5f5f2 0%,
+    #f0f9ff 50%,
+    #e5f5f2 100%
+  );
+  padding-top: 0;
+}
+
+/* Only add padding for home page with navigation */
+.home-page {
+  padding-top: 4rem;
+  background: linear-gradient(
+    135deg,
+    #e5f5f2 0%,
+    #f0f9ff 50%,
+    #e5f5f2 100%
+  );
+  min-height: 100vh;
+}
+
+/* Scroll padding for sections with fixed navbar (only for home page) */
+.home-page html {
+  scroll-padding-top: 80px;
+}
+
+/* Teal dotted grid pattern for Benefits section - reduced top padding */
+section#benefits {
+  position: relative;
+  background-color: #f0fdfa;
+  background-image: 
+    radial-gradient(circle at 25px 25px, rgba(6, 182, 212, 0.15) 1.5px, transparent 1.5px),
+    radial-gradient(circle at 75px 75px, rgba(20, 184, 166, 0.08) 1px, transparent 1px);
+  background-size: 50px 50px, 100px 100px;
+  background-position: 0 0, 25px 25px;
+  /* Reduced padding to prevent large gap */
+  padding-top: 4rem;
+}
+
+/* Blue/teal dotted grid pattern for all other sections - reduced top padding */
+section:not(#home):not(#benefits) {
+  position: relative;
+  background-color: #f8fafc;
+  background-image: 
+    radial-gradient(circle at 25px 25px, rgba(59, 130, 246, 0.12) 1.5px, transparent 1.5px),
+    radial-gradient(circle at 75px 75px, rgba(6, 182, 212, 0.08) 1px, transparent 1px);
+  background-size: 50px 50px, 100px 100px;
+  background-position: 0 0, 25px 25px;
+  /* Reduced padding to prevent large gap */
+  padding-top: 4rem;
+}
+
+/* Alternative pattern for even sections to add variety */
+section:nth-child(even):not(#home):not(#benefits) {
+  background-image: 
+    radial-gradient(circle at 30px 30px, rgba(6, 182, 212, 0.12) 1.5px, transparent 1.5px),
+    radial-gradient(circle at 60px 60px, rgba(59, 130, 246, 0.08) 1px, transparent 1px);
+  background-size: 60px 60px, 120px 120px;
+  background-position: 0 0, 30px 30px;
+}
+
+/* Fix bottom edge rendering issues */
+section {
+  position: relative;
+  z-index: 1;
+}
+
+/* Optimized section container with reduced padding */
+.section-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 0; /* Reduced from 3rem */
+}
+
+@media (max-width: 768px) {
+  .section-container {
+    padding: 1.5rem 0; /* Reduced from 2rem */
+    min-height: auto;
+  }
+  
+  .shimmer-text {
+    background-size: 150% 100%;
+  }
+  
+  .sophisticated-shimmer-box {
+    animation-duration: 3s;
+  }
+  
+  .sophisticated-button {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+  }
+  
+  /* Smaller dots on mobile for better performance */
+  section#benefits {
+    background-image: 
+      radial-gradient(circle at 20px 20px, rgba(6, 182, 212, 0.12) 1px, transparent 1px),
+      radial-gradient(circle at 60px 60px, rgba(20, 184, 166, 0.06) 0.8px, transparent 0.8px);
+    background-size: 40px 40px, 80px 80px;
+    background-position: 0 0, 20px 20px;
+    /* Further reduced padding on mobile */
+    padding-top: 3rem;
+  }
+  
+  section:not(#home):not(#benefits) {
+    background-image: 
+      radial-gradient(circle at 20px 20px, rgba(59, 130, 246, 0.1) 1px, transparent 1px),
+      radial-gradient(circle at 60px 60px, rgba(6, 182, 212, 0.06) 0.8px, transparent 0.8px);
+    background-size: 40px 40px, 80px 80px;
+    background-position: 0 0, 20px 20px;
+    /* Further reduced padding on mobile */
+    padding-top: 3rem;
+  }
+  
+  section:nth-child(even):not(#home):not(#benefits) {
+    background-image: 
+      radial-gradient(circle at 25px 25px, rgba(6, 182, 212, 0.1) 1px, transparent 1px),
+      radial-gradient(circle at 50px 50px, rgba(59, 130, 246, 0.06) 0.8px, transparent 0.8px);
+    background-size: 50px 50px, 100px 100px;
+    background-position: 0 0, 25px 25px;
+  }
+  
+  /* Adjust scroll padding for mobile */
+  html {
+    scroll-padding-top: 0;
+  }
+  
+  /* Mobile scroll padding for home page only */
+  .home-page html {
+    scroll-padding-top: 70px;
+  }
+}
+
+/* GPU acceleration for smooth animations */
+.simple-card {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Long image containers with bottom fade (show ~75% of image) */
+.long-image-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.long-image-mask {
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 75%, rgba(0,0,0,0) 100%);
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 75%, rgba(0,0,0,0) 100%);
+}
