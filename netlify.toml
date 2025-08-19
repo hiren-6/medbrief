@@ -5,6 +5,10 @@
 [build.environment]
   NODE_VERSION = "18"
 
+[build.environment]
+  NODE_VERSION = "18"
+  SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY"
+  
 [[redirects]]
   from = "/*"
   to = "/index.html"
