@@ -3,6 +3,7 @@ import { ArrowLeft, Mail, Lock, Eye, EyeOff, Brain, Shield } from 'lucide-react'
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { useScrollToTop } from '../hooks/useScrollToTop';
+import TopAnnouncement from '../components/TopAnnouncement';
 
 const LoginPage: React.FC = () => {
   // Scroll to top on page load
@@ -144,7 +145,9 @@ const LoginPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-teal-50 flex pt-0">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-teal-50 flex pt-0 flex-col">
+      <TopAnnouncement />
+      <div className="flex flex-1">
       {/* Left Side - Features */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 to-teal-600 p-8 xl:p-12 flex-col justify-center relative overflow-hidden">
         {/* Background Pattern */}
@@ -195,7 +198,7 @@ const LoginPage: React.FC = () => {
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 lg:p-8 min-h-screen">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 lg:p-8 min-h-[calc(100vh-40px)]">
         <div className="w-full max-w-md">
           {/* Back Button */}
           <button
@@ -374,6 +377,7 @@ const LoginPage: React.FC = () => {
             )}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
