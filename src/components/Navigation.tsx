@@ -111,7 +111,14 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick }) => {
               </div>
             </div>
               
-            {/* Login button - Right end (Desktop) */}
+            {/* Beta tag + Login button - Right end (Desktop) */}
+            <span 
+              className="hidden md:inline-flex items-center mr-3 rounded-full border border-blue-200/70 bg-white/70 backdrop-blur-sm px-3 py-1 text-[11px] font-semibold tracking-wider text-blue-700 shadow-sm"
+              title="Beta version"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-gradient-to-r from-blue-500 to-teal-500 mr-2" />
+              BETA
+            </span>
             <button 
               onClick={() => navigate('/login')}
               className="hidden md:flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-teal-500 text-white px-4 lg:px-5 py-2 rounded-xl hover:from-blue-600 hover:to-teal-600 transition-all duration-300 transform hover:scale-105 font-medium text-sm lg:text-base flex-shrink-0"
@@ -154,6 +161,13 @@ const Navigation: React.FC<NavigationProps> = ({ onLoginClick }) => {
                   );
                 })}
                 <div className="pt-2">
+                  <span 
+                    className="inline-flex items-center mb-2 rounded-full border border-blue-200/70 bg-white/70 backdrop-blur-sm px-3 py-1 text-[11px] font-semibold tracking-wider text-blue-700 shadow-sm"
+                    title="Beta version"
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-gradient-to-r from-blue-500 to-teal-500 mr-2" />
+                    BETA
+                  </span>
                   <button 
                     onClick={() => navigate('/login')}
                     className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-blue-500 to-teal-500 text-white px-6 py-3 rounded-xl hover:from-blue-600 hover:to-teal-600 transition-all duration-300 transform hover:scale-105 font-medium"
