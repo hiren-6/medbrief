@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Brain, Shield, User } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import TopAnnouncement from '../components/TopAnnouncement';
 
 const SignupPage: React.FC = () => {
   const navigate = useNavigate();
@@ -99,18 +100,23 @@ const SignupPage: React.FC = () => {
 
   if (signupSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-cyan-50 to-teal-50">
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-cyan-50 to-teal-50">
+        <TopAnnouncement />
+        <div className="flex-1 flex items-center justify-center p-4">
         <div className="bg-white p-8 rounded shadow-md w-full max-w-md text-center">
           <h2 className="text-2xl font-bold mb-4 text-green-600">Signup Successful!</h2>
           <p className="mb-4">Please check your email to confirm your account before proceeding.</p>
           <button onClick={() => navigate('/profile-setup')} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Complete Profile Setup</button>
+        </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-teal-50 flex pt-0">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-teal-50 flex pt-0 flex-col">
+      <TopAnnouncement />
+      <div className="flex flex-1">
       {/* Left Side - Features */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 to-teal-600 p-8 xl:p-12 flex-col justify-start relative overflow-hidden">
         {/* Background Pattern */}
@@ -161,7 +167,7 @@ const SignupPage: React.FC = () => {
       </div>
 
       {/* Right Side - Signup Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 lg:p-8 min-h-screen">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 lg:p-8 min-h-[calc(100vh-40px)]">
         <div className="w-full max-w-md">
           {/* Back Button */}
           <button
@@ -338,6 +344,7 @@ const SignupPage: React.FC = () => {
             </form>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
