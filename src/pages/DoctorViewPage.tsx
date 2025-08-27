@@ -1013,8 +1013,8 @@ const DoctorViewPage: React.FC = () => {
     .container { max-width: 900px; margin: 0 auto; background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); overflow: hidden; }
     .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 40px; position: relative; overflow: hidden; }
     .header::before { content: ''; position: absolute; top: -50%; right: -10%; width: 40%; height: 200%; background: rgba(255,255,255,0.05); transform: rotate(35deg); }
-    .header-content { position: relative; z-index: 1; }
-    .logo { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+    .header-content { position: relative; z-index: 1; text-align: center; }
+    .logo { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 20px; }
     .logo-text { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
     .subtitle { font-size: 16px; opacity: 0.9; margin-top: 5px; }
     .urgency-badge { display: inline-flex; align-items: center; justify-content: center; gap: 10px; background: #ff4757; color: white; padding: 10px 22px; border-radius: 9999px; font-size: 13px; font-weight: 700; margin-top: 15px; line-height: 1; min-height: 40px; white-space: nowrap; text-align: center; }
@@ -1065,7 +1065,7 @@ const DoctorViewPage: React.FC = () => {
       <div class=\"logo\">
         <div>
           <div class=\"logo-text\">MedBrief AI</div>
-          <div class=\"subtitle\">Patient's Clinical Summary</div>
+          <div class=\"subtitle\">Integrated Medical Summary</div>
         </div>
       </div>
       ${urgencyBadge ? `<div class=\"urgency-badge\">${urgencyBadge}</div>` : ''}
