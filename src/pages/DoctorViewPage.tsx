@@ -132,6 +132,7 @@ const DoctorViewPage: React.FC = () => {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [patientDetail, setPatientDetail] = useState<PatientDetail | null>(null);
   const [currentConsultationId, setCurrentConsultationId] = useState<string | null>(null);
+  const [complaintData, setComplaintData] = useState<ComplaintData | null>(null);
   const [patientDocuments, setPatientDocuments] = useState<PatientDocument[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<PatientDocument | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
@@ -376,7 +377,7 @@ const DoctorViewPage: React.FC = () => {
         chronicConditions: formData.chronicConditions || ''
       };
 
-      // complaint data no longer stored in component state
+      setComplaintData(complaint);
 
       // Fetch patient documents
       console.log('Fetching documents for consultation_id:', appointment.consultation_id);
@@ -667,6 +668,7 @@ const DoctorViewPage: React.FC = () => {
   const handleBack = () => {
     setSelectedPatient(null);
     setPatientDetail(null);
+    setComplaintData(null);
     setPatientDocuments([]);
     setSelectedDocument(null);
     setExpandedCategories({});
@@ -920,11 +922,48 @@ const DoctorViewPage: React.FC = () => {
     const patient = patients.find(p => p.id === selectedPatient);
     if (!patient) return null;
 
-    // legacy PDF generator removed
-
     const handleDownloadPDF = async () => {
-      const html2canvasMod = await import('html2canvas');
-      const html2canvas = html2canvasMod.default;
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const marginLeft = 14;
+      const marginRight = 14;
+      const contentWidth = pageWidth - marginLeft - marginRight;
+
+      const toLabel = (key: string) => key.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+      const valueToString = (v: any) => {
+        if (v === null || v === undefined || v === '') return '-';
+        if (typeof v === 'object') return JSON.stringify(v);
+        return String(v);
+      };
+
+      const loadSvgAsPngDataUrl = async (svgUrl: string, widthPx: number): Promise<string | null> => {
+        try {
+          const resp = await fetch(svgUrl);
+          const svgText = await resp.text();
+          const svgBlob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
+          const url = URL.createObjectURL(svgBlob);
+          const img: HTMLImageElement = await new Promise((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => resolve(image);
+            image.onerror = reject as any;
+            image.src = url;
+          });
+          const aspect = img.width ? (img.height / img.width) : 1;
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.floor(widthPx));
+          canvas.height = Math.max(1, Math.floor(widthPx * aspect));
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return null;
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const pngDataUrl = canvas.toDataURL('image/png');
+          URL.revokeObjectURL(url);
+          return pngDataUrl;
+        } catch (e) {
+          console.warn('Logo load failed', e);
+          return null;
+        }
+      };
 
       let doctorName = 'Doctor';
       let doctorEmail = '';
@@ -940,261 +979,301 @@ const DoctorViewPage: React.FC = () => {
           if (prof && prof.full_name) doctorName = prof.full_name;
         }
       } catch {}
+
       const doctorDisplayName = (() => {
         const n = (doctorName || '').trim();
         return /^dr\.?\s/i.test(n) ? n : n ? `Dr. ${n}` : 'Dr.';
       })();
 
-      const sj = clinicalSummary?.summary_json as any | undefined;
+      const headerHeight = 16;
+      const footerHeight = 12;
+      const logoDataUrl = await loadSvgAsPngDataUrl('/Picture3.svg', 120);
+      const footerSignature = clinicalSummary?.created_at
+        ? `AI summary generated • ${formatDateTimeIST_DDMMMYYYY(clinicalSummary.created_at)}`
+        : `Generated • ${new Date().toLocaleString()}`;
 
-      const computeStatus = (result: string | undefined, range: string | undefined): string => {
-        if (!result || !range) return '—';
-        const num = parseFloat(String(result).replace(/[^0-9.\-]/g, ''));
-        const lt = /<\s*([0-9.]+)/.exec(range || '');
-        const gt = />\s*([0-9.]+)/.exec(range || '');
-        if (!isFinite(num)) return '—';
-        if (lt) {
-          const max = parseFloat(lt[1]);
-          if (isFinite(max)) return num < max ? '✓ Normal' : '⚠️ High';
+      const didDrawPage = (data: any) => {
+        const topY = 8;
+        if (logoDataUrl) {
+          try { doc.addImage(logoDataUrl, 'PNG', marginLeft, topY - 2, 28, 10); } catch {}
         }
-        if (gt) {
-          const min = parseFloat(gt[1]);
-          if (isFinite(min)) return num > min ? '✓ Normal' : '⚠️ Low';
-        }
-        return '—';
+        doc.setFontSize(11);
+        doc.setTextColor(30);
+        doc.text('MedBrief AI — Consultation Summary', marginLeft + 34, topY + 6);
+
+        doc.setFontSize(9);
+        doc.setTextColor(100);
+        const footerY = pageHeight - 6;
+        doc.text(footerSignature, marginLeft, footerY);
       };
 
-      const container = document.createElement('div');
-      container.style.position = 'fixed';
-      container.style.left = '-10000px';
-      container.style.top = '0';
-      container.style.width = '960px';
+      const commonTable = {
+        margin: { top: headerHeight + 6, bottom: footerHeight + 6, left: marginLeft, right: marginRight },
+        styles: { fontSize: 10, cellPadding: 3, overflow: 'linebreak' as const },
+        headStyles: { fillColor: [33, 150, 243] as [number, number, number], textColor: 255, halign: 'left' as const },
+        pageBreak: 'avoid' as const,
+        rowPageBreak: 'avoid' as const,
+        didDrawPage
+      };
 
-      const patientEmail = patientDetail?.email || patient.email || '';
-      const dobText = patientDetail?.date_of_birth ? new Date(patientDetail.date_of_birth).toLocaleDateString() : '';
-      const urgency = (sj?.urgency || '').toString().toLowerCase();
-      const urgencyBadge = urgency === 'urgent' ? '⚠️ URGENT - Requires Immediate Attention' : '';
+      let startY: number | undefined = headerHeight + 14;
 
-      const timeline = Array.isArray(sj?.past_medical_events) ? sj!.past_medical_events : [];
-      const timelineHtml = (timeline || []).map((t: any) => {
-        const date = t?.date || t?.when || '';
-        const event = t?.event || t?.name || t?.description || t || '';
-        return `<div class=\"timeline-item\"><div class=\"timeline-date\">${String(date)}</div><div class=\"timeline-event\">${String(event)}</div></div>`;
-      }).join('');
+      autoTable(doc, {
+        ...commonTable,
+        startY,
+        theme: 'plain',
+        body: [[{ content: `${patient.name || 'Patient'} — Summary`, styles: { fontSize: 14, fontStyle: 'bold' } }]],
+      } as any);
+      startY = (doc as any).lastAutoTable.finalY + 2;
 
-      const labs = Array.isArray(sj?.past_investigations) ? sj!.past_investigations : [];
-      const labRows = (labs || []).map((l: any) => {
-        const test = l?.test || l?.name || '';
-        const result = l?.result || l?.value || '';
-        const ref = l?.reference_range || l?.range || '';
-        const status = computeStatus(String(result), String(ref));
-        const statusHtml = status.includes('High') || status.includes('Low')
-          ? `<span class=\"result-abnormal\">${status}</span>`
-          : status.includes('Normal') ? `<span class=\"result-normal\">${status}</span>` : '—';
-        return `<tr class=\"page-avoid-break\"><td>${test}</td><td class=\"${status.includes('High')||status.includes('Low')?'result-abnormal':'result-normal'}\">${result || '—'}</td><td>${ref || '—'}</td><td>${statusHtml}</td></tr>`;
-      }).join('');
+      autoTable(doc, {
+        ...commonTable,
+        startY,
+        head: [['Doctor Details', '']],
+        body: [
+          ['Name', doctorDisplayName],
+          ['Email', doctorEmail || '-'],
+        ],
+        theme: 'grid',
+        columnStyles: { 0: { cellWidth: 45 }, 1: { cellWidth: contentWidth - 45 } },
+      } as any);
+      startY = (doc as any).lastAutoTable.finalY + 6;
 
-      const medsActive: string[] = Array.isArray(sj?.medications?.active) ? sj!.medications!.active : [];
-      const medsHtml = (medsActive && medsActive.length > 0 ? medsActive : ['None']).map(m => (
-        `<div class=\"medication-item page-avoid-break\"><div class=\"med-icon\">💊</div><div class=\"med-details\"><div class=\"med-name\">${m}</div><div class=\"med-dose\"></div></div></div>`
-      )).join('');
+      const dob = patientDetail?.date_of_birth ? new Date(patientDetail.date_of_birth).toLocaleDateString() : '-';
+      autoTable(doc, {
+        ...commonTable,
+        startY,
+        head: [['Patient Details', '']],
+        body: [
+          ['Name', patient.name || '-'],
+          ['Age / Gender', `${patient.age || '-'} / ${patient.gender || '-'}`],
+          ['Phone', patient.phone || '-'],
+          ['Email', patientDetail?.email || patient.email || '-'],
+          ['Date of Birth', dob],
+          ['Appointment', `${patient.appointmentDate || '-'} ${patient.appointmentTime ? '• ' + patient.appointmentTime : ''}`],
+        ],
+        theme: 'grid',
+        columnStyles: { 0: { cellWidth: 45 }, 1: { cellWidth: contentWidth - 45 } },
+      } as any);
+      startY = (doc as any).lastAutoTable.finalY + 8;
 
-      const testsToConsider: string[] = sj?.ai_insights_and_suggestions?.next_steps?.tests_to_consider || [];
-      const medsToReview: string[] = sj?.ai_insights_and_suggestions?.next_steps?.medications_to_review_start || [];
-      const referrals: string[] = sj?.ai_insights_and_suggestions?.next_steps?.referrals_to_consider || [];
+      if (!clinicalSummary || !clinicalSummary.summary_json) {
+        autoTable(doc, {
+          ...commonTable,
+          startY,
+          head: [['AI Clinical Summary']],
+          body: [[{ content: 'No AI summary available.', styles: { textColor: 120 } }]],
+          theme: 'grid',
+        } as any);
+        doc.save(`${patient.name || 'patient'}_summary.pdf`);
+        return;
+      }
 
-      const nowText = clinicalSummary?.created_at ? formatDateTimeIST_DDMMMYYYY(clinicalSummary.created_at) : new Date().toLocaleString();
+      const sj = clinicalSummary.summary_json as any;
 
-      container.innerHTML = `
-<div class=\"container\">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body, .container { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
-    .container { max-width: 900px; margin: 0 auto; background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); overflow: hidden; }
-    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 40px; position: relative; overflow: hidden; }
-    .header::before { content: ''; position: absolute; top: -50%; right: -10%; width: 40%; height: 200%; background: rgba(255,255,255,0.05); transform: rotate(35deg); }
-    .header-content { position: relative; z-index: 1; text-align: center; }
-    .logo { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 20px; }
-    .logo-text { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
-    .subtitle { font-size: 16px; opacity: 0.9; margin-top: 5px; }
-    .urgency-badge { display: inline-flex; align-items: center; justify-content: center; gap: 10px; background: #ff4757; color: white; padding: 10px 22px; border-radius: 9999px; font-size: 13px; font-weight: 700; margin-top: 15px; line-height: 1; min-height: 40px; white-space: nowrap; text-align: center; }
-    .content { padding: 40px; }
-    .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; margin-bottom: 35px; }
-    .info-card { background: #f8f9fa; border-radius: 15px; padding: 20px; border-left: 4px solid #667eea; }
-    .card-title { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #6c757d; margin-bottom: 12px; font-weight: 600; }
-    .card-icon { width: 24px; height: 24px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; }
-    .card-content { font-size: 16px; color: #2c3e50; line-height: 1.6; }
-    .card-content strong { color: #1a1a1a; font-weight: 600; }
-    .section { margin-bottom: 35px; }
-    .section-title { font-size: 20px; font-weight: 700; color: #2c3e50; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
-    .section-icon { width: 32px; height: 32px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; }
-    .clinical-synopsis { background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 15px; padding: 25px; border-left: 4px solid #667eea; line-height: 1.8; color: #2c3e50; }
-    .timeline { position: relative; padding-left: 30px; }
-    .timeline-item { position: relative; padding-bottom: 20px; }
-    .timeline-item::before { content: ''; position: absolute; left: -30px; top: 8px; width: 12px; height: 12px; background: #667eea; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    .timeline-item::after { content: ''; position: absolute; left: -24px; top: 20px; width: 2px; height: calc(100% - 10px); background: #e9ecef; }
-    .timeline-item:last-child::after { display: none; }
-    .timeline-date { font-size: 13px; color: #6c757d; font-weight: 600; margin-bottom: 5px; }
-    .timeline-event { font-size: 15px; color: #2c3e50; }
-    .lab-table { width: 100%; border-collapse: separate; border-spacing: 0; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-    .lab-table th { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 15px; text-align: left; font-size: 14px; font-weight: 600; }
-    .lab-table td { padding: 12px 15px; border-bottom: 1px solid #e9ecef; font-size: 14px; }
-    .lab-table tr:last-child td { border-bottom: none; }
-    .lab-table tr:nth-child(even) { background: #f8f9fa; }
-    .lab-table tr:hover { background: #e9ecef; }
-    .result-abnormal { color: #ff4757; font-weight: 600; }
-    .result-normal { color: #5f27cd; }
-    .medication-list { display: grid; gap: 12px; }
-    .medication-item { background: white; border: 1px solid #e9ecef; border-radius: 10px; padding: 15px; display: flex; align-items: center; gap: 15px; }
-    /* hint to avoid splitting critical cards across pages */
-    .page-avoid-break { break-inside: avoid; page-break-inside: avoid; }
-    .med-icon { width: 40px; height: 40px; background: linear-gradient(135deg, #48dbfb, #0abde3); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; }
-    .med-details { flex: 1; }
-    .med-name { font-weight: 600; color: #2c3e50; margin-bottom: 3px; }
-    .med-dose { font-size: 13px; color: #6c757d; }
-    .recommendation-card { background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%); border-radius: 15px; padding: 20px; margin-bottom: 20px; }
-    .recommendation-card h4 { color: #2d3436; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-    .recommendation-list { list-style: none; }
-    .recommendation-list li { padding: 8px 0; padding-left: 25px; position: relative; color: #2d3436; }
-    .recommendation-list li::before { content: '→'; position: absolute; left: 0; color: #d63031; font-weight: bold; }
-    .footer { background: #f8f9fa; padding: 25px 40px; border-top: 1px solid #e9ecef; text-align: center; color: #6c757d; font-size: 13px; }
-    .footer-logo { font-weight: 700; color: #667eea; margin-bottom: 5px; }
-  </style>
-  <div class=\"header\">
-    <div class=\"header-content\">
-      <div class=\"logo\">
-        <div>
-          <div class=\"logo-text\">MedBrief AI</div>
-          <div class=\"subtitle\">Integrated Medical Summary</div>
-        </div>
-      </div>
-      ${urgencyBadge ? `<div class=\"urgency-badge\">${urgencyBadge}</div>` : ''}
-    </div>
-  </div>
-  <div class=\"content\">
-    <div class=\"info-grid\">
-      <div class=\"info-card page-avoid-break\">
-        <div class=\"card-title\"><div class=\"card-icon\">👤</div>Patient Information</div>
-        <div class=\"card-content\">
-          <strong>${patient.name || '—'}</strong><br>
-          ${patient.age || '—'} years old, ${patient.gender || '—'}<br>
-          ${dobText ? `DOB: ${dobText}<br>` : ''}
-          ${patientEmail ? `📧 ${patientEmail}` : ''}
-        </div>
-      </div>
-      <div class=\"info-card page-avoid-break\">
-        <div class=\"card-title\"><div class=\"card-icon\">👨‍⚕️</div>Attending Physician</div>
-        <div class=\"card-content\">
-          <strong>${doctorDisplayName}</strong><br>
-          Consultation Date: ${patient.appointmentDate || '—'}<br>
-          Time: ${patient.appointmentTime || '—'}<br>
-          ${doctorEmail ? `📧 ${doctorEmail}` : ''}
-        </div>
-      </div>
-    </div>
+      if (sj.short_clinical_synopsis) {
+        autoTable(doc, {
+          ...commonTable,
+          startY,
+          head: [['Clinical Synopsis']],
+          body: [[sj.short_clinical_synopsis]],
+          theme: 'grid',
+          styles: { ...commonTable.styles, cellWidth: contentWidth },
+        } as any);
+        startY = (doc as any).lastAutoTable.finalY + 6;
+      }
 
-    <div class=\"section\">
-      <h3 class=\"section-title\"><div class=\"section-icon\">📋</div>Clinical Synopsis</h3>
-      <div class=\"clinical-synopsis\">${sj?.short_clinical_synopsis || 'No AI synopsis available.'}</div>
-    </div>
+      if (sj.urgency || (sj.ai_insights_and_suggestions?.urgency_flags || []).length > 0) {
+        const flags = (sj.ai_insights_and_suggestions?.urgency_flags || []) as string[];
+        const urgencyText = sj.urgency ? `Urgency: ${toLabel(String(sj.urgency))}` : '';
+        autoTable(doc, {
+          ...commonTable,
+          startY,
+          head: [['Urgency']],
+          body: [
+            [urgencyText || '-'],
+            ...(flags.length > 0 ? flags.map(f => [`• ${f}`]) : []),
+          ],
+          theme: 'grid',
+        } as any);
+        startY = (doc as any).lastAutoTable.finalY + 6;
+      }
 
-    ${timelineHtml ? `<div class=\"section\"><h3 class=\"section-title page-avoid-break\"><div class=\"section-icon\">📅</div>Medical Timeline</h3><div class=\"timeline\">${timelineHtml.replaceAll('class=\\"timeline-item\\"','class=\\"timeline-item page-avoid-break\\"')}</div></div>` : ''}
-
-    ${labRows ? `<div class=\"section\"><h3 class=\"section-title\"><div class=\"section-icon\">🔬</div>Laboratory Results</h3><table class=\"lab-table\"><thead><tr><th>Test</th><th>Result</th><th>Reference Range</th><th>Status</th></tr></thead><tbody>${labRows}</tbody></table></div>` : ''}
-
-    <div class=\"section\">
-      <h3 class=\"section-title\"><div class=\"section-icon\">💊</div>Current Medications</h3>
-      <div class=\"medication-list\">${medsHtml}</div>
-    </div>
-
-    ${(testsToConsider?.length || medsToReview?.length || referrals?.length) ? `
-    <div class=\"section\">
-      <h3 class=\"section-title\"><div class=\"section-icon\">🏥</div>Cardiology Recommendations</h3>
-      ${testsToConsider?.length ? `<div class=\"recommendation-card page-avoid-break\"><h4>⚡ Immediate Tests Required</h4><ul class=\"recommendation-list\">${testsToConsider.map(t => `<li>${t}</li>`).join('')}</ul></div>` : ''}
-      ${medsToReview?.length ? `<div class=\"recommendation-card page-avoid-break\"><h4>💊 Medication Considerations</h4><ul class=\"recommendation-list\">${medsToReview.map(m => `<li>${m}</li>`).join('')}</ul></div>` : ''}
-      ${referrals?.length ? `<div class=\"recommendation-card page-avoid-break\"><h4>👥 Referral Recommendations</h4><ul class=\"recommendation-list\">${referrals.map(r => `<li>${r}</li>`).join('')}</ul></div>` : ''}
-    </div>` : ''}
-  </div>
-  <div class=\"footer\">
-    <div class=\"footer-logo\">MedBrief AI</div>
-    <div>Confidential Medical Document | Generated: ${nowText}</div>
-    <div>This summary is intended for medical professionals only</div>
-  </div>
-</div>`;
-
-      document.body.appendChild(container);
-
-      const canvas = await html2canvas(container, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
-
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-
-      // account for a small safe margin to avoid slicing through borders/shadows
-      const pxPerMm = canvas.width / (pdfWidth);
-      const pageHeightPx = Math.floor(pdfHeight * pxPerMm) - Math.floor(6 * pxPerMm);
-
-      let renderedHeight = 0;
-      let pageIndex = 0;
-      while (renderedHeight < canvas.height) {
-        let sliceHeight = Math.min(pageHeightPx, canvas.height - renderedHeight);
-        // try to avoid slicing through mid-card by backing up to nearest whitespace row
-        if (sliceHeight < canvas.height - renderedHeight) {
-          const probeCanvas = document.createElement('canvas');
-          probeCanvas.width = canvas.width;
-          probeCanvas.height = 1;
-          const pctx = probeCanvas.getContext('2d');
-          if (pctx) {
-            let backoff = 0;
-            const maxBackoff = Math.floor(16 * pxPerMm); // ~16mm
-            while (backoff < maxBackoff) {
-              pctx.clearRect(0, 0, probeCanvas.width, 1);
-              pctx.drawImage(canvas, 0, renderedHeight + sliceHeight - backoff, canvas.width, 1, 0, 0, canvas.width, 1);
-              const row = pctx.getImageData(0, 0, probeCanvas.width, 1).data;
-              // heuristic: if most pixels are very light, likely whitespace area for a clean break
-              let dark = 0;
-              for (let i = 0; i < row.length; i += 4) {
-                const r = row[i], g = row[i+1], b = row[i+2];
-                const lum = 0.2126*r + 0.7152*g + 0.0722*b;
-                if (lum < 245) dark++;
-              }
-              if (dark < probeCanvas.width * 0.02) { // <2% non-white
-                sliceHeight -= backoff;
-                break;
-              }
-              backoff += 2; // step back 2px
-            }
+      if (Array.isArray(sj.past_medical_events)) {
+        const list = sj.past_medical_events as any[];
+        if (list.length > 0) {
+          const containsObjects = list.some(item => item && typeof item === 'object');
+          if (!containsObjects) {
+            autoTable(doc, {
+              ...commonTable,
+              startY,
+              head: [['Past Medical Events']],
+              body: list.map(item => [String(item)]),
+              theme: 'grid',
+            } as any);
+          } else {
+            const normalizedRows = list.map(item => (item && typeof item === 'object') ? item : { value: item });
+            const keySet = new Set<string>();
+            normalizedRows.forEach(r => Object.keys(r || {}).forEach(k => keySet.add(k)));
+            const preferredOrder = ['date', 'when', 'occurred_on', 'performed_on', 'event', 'name', 'description', 'notes', 'details', 'comment', 'status', 'state', 'value'];
+            const keys = Array.from(keySet).sort((a, b) => {
+              const ia = preferredOrder.indexOf(a);
+              const ib = preferredOrder.indexOf(b);
+              if (ia !== -1 && ib !== -1) return ia - ib;
+              if (ia !== -1) return -1;
+              if (ib !== -1) return 1;
+              return a.localeCompare(b);
+            });
+            autoTable(doc, {
+              ...commonTable,
+              startY,
+              head: [keys.map(k => toLabel(k))],
+              body: normalizedRows.map(row => keys.map(k => valueToString(row[k]))),
+              theme: 'grid',
+            } as any);
           }
+          startY = (doc as any).lastAutoTable.finalY + 6;
         }
-        const pageCanvas = document.createElement('canvas');
-        pageCanvas.width = canvas.width;
-        pageCanvas.height = sliceHeight;
-        const ctx = pageCanvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(
-            canvas,
-            0,
-            renderedHeight,
-            canvas.width,
-            sliceHeight,
-            0,
-            0,
-            canvas.width,
-            sliceHeight
-          );
-          const imgData = pageCanvas.toDataURL('image/png');
-          if (pageIndex > 0) pdf.addPage();
-          const imgHeightMm = (sliceHeight / pxPerMm);
-          pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, imgHeightMm, undefined, 'FAST');
+      }
+
+      if (Array.isArray(sj.past_investigations)) {
+        const list = sj.past_investigations as any[];
+        if (list.length > 0) {
+          const containsObjects = list.some((item: any) => item && typeof item === 'object');
+          if (!containsObjects) {
+            autoTable(doc, {
+              ...commonTable,
+              startY,
+              head: [['Past Investigations']],
+              body: list.map(item => [String(item)]),
+              theme: 'grid',
+            } as any);
+          } else {
+            const normalizedRows = list.map(item => (item && typeof item === 'object') ? item : { value: item });
+            const keySet = new Set<string>();
+            normalizedRows.forEach(r => Object.keys(r || {}).forEach(k => keySet.add(k)));
+            const preferredOrder = ['date', 'test', 'name', 'description', 'result', 'value', 'unit', 'notes', 'status', 'comment'];
+            const keys = Array.from(keySet).sort((a, b) => {
+              const ia = preferredOrder.indexOf(a);
+              const ib = preferredOrder.indexOf(b);
+              if (ia !== -1 && ib !== -1) return ia - ib;
+              if (ia !== -1) return -1;
+              if (ib !== -1) return 1;
+              return a.localeCompare(b);
+            });
+            autoTable(doc, {
+              ...commonTable,
+              startY,
+              head: [keys.map(k => toLabel(k))],
+              body: normalizedRows.map(row => keys.map(k => valueToString(row[k]))),
+              theme: 'grid',
+            } as any);
+          }
+          startY = (doc as any).lastAutoTable.finalY + 6;
         }
-        renderedHeight += sliceHeight;
-        pageIndex += 1;
+      }
+
+      if (sj.medications && Array.isArray(sj.medications.active)) {
+        const act = sj.medications.active as string[];
+        autoTable(doc, {
+          ...commonTable,
+          startY,
+          head: [['Current Medications']],
+          body: (act && act.length > 0 && !(act.length === 1 && act[0] === 'None')) ? act.map((m: string) => [`• ${m}`]) : [['None']],
+          theme: 'grid',
+        } as any);
+        startY = (doc as any).lastAutoTable.finalY + 6;
+      }
+
+      if (sj.medications && Array.isArray(sj.medications.past)) {
+        const past = sj.medications.past as string[];
+        autoTable(doc, {
+          ...commonTable,
+          startY,
+          head: [['Past Medications']],
+          body: (past && past.length > 0 && !(past.length === 1 && past[0] === 'None')) ? past.map((m: string) => [`• ${m}`]) : [['None']],
+          theme: 'grid',
+        } as any);
+        startY = (doc as any).lastAutoTable.finalY + 6;
+      }
+
+      if (Array.isArray(sj.potential_conflicts_gaps) && sj.potential_conflicts_gaps.length > 0) {
+        autoTable(doc, {
+          ...commonTable,
+          startY,
+          head: [['Potential Conflicts / Gaps']],
+          body: sj.potential_conflicts_gaps.map((t: string) => [`• ${t}`]),
+          theme: 'grid',
+        } as any);
+        startY = (doc as any).lastAutoTable.finalY + 6;
+      }
+
+      const relEntries = Object.entries(sj.ai_insights_and_suggestions || {}).filter(([k]) => k.startsWith('relevance_to_')) as [string, any][];
+      if (relEntries.length > 0) {
+        autoTable(doc, {
+          ...commonTable,
+          startY,
+          head: [['Topic', 'Relevance To']],
+          body: relEntries.map(([k, v]) => [toLabel(k.replace('relevance_to_', 'Relevance to ')), valueToString(v)]),
+          columnStyles: {
+            0: { cellWidth: 55 },
+            1: { cellWidth: contentWidth - 55 },
+          },
+          theme: 'grid',
+        } as any);
+        startY = (doc as any).lastAutoTable.finalY + 6;
+      }
+
+      const tests = sj.ai_insights_and_suggestions?.next_steps?.tests_to_consider as string[] | undefined;
+      if (Array.isArray(tests) && tests.length > 0) {
+        autoTable(doc, {
+          ...commonTable,
+          startY,
+          head: [['Tests To Consider']],
+          body: tests.map(t => [`• ${t}`]),
+          theme: 'grid',
+        } as any);
+        startY = (doc as any).lastAutoTable.finalY + 6;
+      }
+
+      const medsToReview = sj.ai_insights_and_suggestions?.next_steps?.medications_to_review_start as string[] | undefined;
+      if (Array.isArray(medsToReview) && medsToReview.length > 0) {
+        autoTable(doc, {
+          ...commonTable,
+          startY,
+          head: [['Medications To Review/Start']],
+          body: medsToReview.map(t => [`• ${t}`]),
+          theme: 'grid',
+        } as any);
+        startY = (doc as any).lastAutoTable.finalY + 6;
+      }
+
+      const referrals = sj.ai_insights_and_suggestions?.next_steps?.referrals_to_consider as string[] | undefined;
+      if (Array.isArray(referrals) && referrals.length > 0) {
+        autoTable(doc, {
+          ...commonTable,
+          startY,
+          head: [['Referrals To Consider']],
+          body: referrals.map(t => [`• ${t}`]),
+          theme: 'grid',
+        } as any);
+        startY = (doc as any).lastAutoTable.finalY + 6;
+      }
+
+      // Centered page labels: "Page X" at bottom center
+      const total = doc.getNumberOfPages();
+      for (let i = 1; i <= total; i++) {
+        doc.setPage(i);
+        const label = `Page ${i}`;
+        doc.setFontSize(9);
+        doc.setTextColor(100);
+        const width = doc.getTextWidth(label);
+        const y = pageHeight - 6;
+        doc.text(label, (pageWidth - width) / 2, y);
       }
 
       const safeName = (patient.name || 'patient').replace(/[^a-z0-9_\- ]/gi, '_');
-      pdf.save(`${safeName}_summary.pdf`);
-
-      document.body.removeChild(container);
+      doc.save(`${safeName}_summary.pdf`);
     };
 
     return (
