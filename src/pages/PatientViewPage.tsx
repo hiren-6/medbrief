@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Upload, FileText, CheckCircle, AlertCircle, Clock, Heart, Pill } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Upload, FileText, CheckCircle, AlertCircle, Clock, Heart, Pill, Mic } from 'lucide-react';
 import { scrollToTop, useScrollToTop } from '../hooks/useScrollToTop';
 import { supabase } from '../supabaseClient';
 import AppointmentScheduler from '../components/AppointmentScheduler';
 import PatientSidebar from '../components/PatientSidebar';
 import PatientTopNavbar from '../components/PatientTopNavbar';
+import VoiceAssistantModal from '../components/VoiceAssistantModal';
 
 
 // Helper function to format specialty display
@@ -64,6 +65,7 @@ const PatientViewPage: React.FC = () => {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [patientId, setPatientId] = useState<string>('');
   const [patientName, setPatientName] = useState<string>('');
+  const [voiceOpen, setVoiceOpen] = useState<boolean>(false);
   const [showPopup, setShowPopup] = useState(false);
 
   // New: Doctor selection state
@@ -700,6 +702,18 @@ const PatientViewPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Voice Assistant trigger directly below the header and above first question */}
+              <div className="mb-6">
+                <button
+                  type="button"
+                  onClick={() => setVoiceOpen(true)}
+                  className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-teal-500 text-white hover:from-blue-600 hover:to-teal-600 shadow"
+                >
+                  <Mic className="h-4 w-4" />
+                  <span>Use Jerry - the Voice Assistant </span>
+                </button>
+              </div>
+
 
 
               <form className="space-y-8">
@@ -825,6 +839,21 @@ const PatientViewPage: React.FC = () => {
                   </button>
                 </div>
               </form>
+              <VoiceAssistantModal
+                isOpen={voiceOpen}
+                onClose={() => setVoiceOpen(false)}
+                patientFirstName={patientName}
+                onComplete={(answers) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    concern: answers.concern || prev.concern,
+                    symptomDuration: answers.symptomDuration || prev.symptomDuration,
+                    chronicIllness: answers.chronicIllness || prev.chronicIllness,
+                    medications: answers.medications || prev.medications,
+                    additionalNotes: answers.additionalNotes || prev.additionalNotes
+                  }));
+                }}
+              />
             </div>
           ) : (
             // Step 4: Document Upload
