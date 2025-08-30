@@ -101,7 +101,6 @@ const Hero: React.FC<HeroProps> = ({ onSummarizeClick }) => {
       {/* Video Background */}
       <video
         autoPlay
-        loop
         muted
         playsInline
         preload="auto"
@@ -109,6 +108,12 @@ const Hero: React.FC<HeroProps> = ({ onSummarizeClick }) => {
         onCanPlay={() => setIsVideoReady(true)}
         onLoadedData={() => setIsVideoReady(true)}
         onError={() => setIsVideoReady(false)}
+        onEnded={(e) => {
+          // Freeze video on last frame
+          const video = e.target as HTMLVideoElement;
+          video.pause();
+          video.currentTime = video.duration;
+        }}
       >
         <source src="/Hero_banner.mp4" type="video/mp4" />
       </video>
